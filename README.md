@@ -1,8 +1,8 @@
 ## Setup serial interrupt on ESP8266.
-Arduino framework is one of the frameworks which are used to develop ESP8266 projects and it gives a feature to read data from rx/tx or UART(through microUSB cable).
+Arduino framework is one of the frameworks which are used to develop ESP8266 projects and it gives a feature to read data from rx/tx or microUSB port.
 By using Serial object which is part of Arduino, you can read and write data; but you always need to check for available data on serial and then read it;
-This is not a very suitable way to read recieved data for more complex projects. ESP8266 has a specific header file **"uart_register.h"** which gives access 
-to UART registers(interrupts/read/write). Using this feature gives advantage of synchronous data update.
+This is not a very suitable way to recieve and process data for more complex projects. ESP8266 has a specific header file **"uart_register.h"** which gives access 
+to UART registers(interrupts/read/write). Using this feature gives advantage of recieving and processing data anywhere in the program **without using Serial.read(), Serial.readbytesuntil(), etc. functions.**
 
 ### Step 1: Setting up interrupts
 first, create a function to do settings in it. create another function as interrupt handler. 
@@ -43,7 +43,7 @@ Call these functions to clear other interrupts:
 
     WRITE_PERI_REG(UART_INT_CLR(0), 0xffff);
     CLEAR_PERI_REG_MASK(UART_INT_ENA(0), UART_RXFIFO_FULL_INT_ENA);
-> Notice: It is mandatory to clear RX full interrupt. full buffer interrupt is enabled by default.
+> Notice: It is mandatory to clear RX full interrupt mask. full buffer interrupt is enabled by default.
 
 Now enable uart interrupts:
 
@@ -55,7 +55,7 @@ set interrupt mask:
 setup interrupt threshold:    
         
     WRITE_PERI_REG(UART_CONF1(0) , (<threshold of buffer> & UART_TXFIFO_EMPTY_THRHD) << UART_TXFIFO_EMPTY_THRHD_S);
-e.g. ESP should write some data on serial; transmission speed is much slower than operating speed; so it can do other stuff until tx is empty and ready for new data to be written.      
+An example of tx empty is: ESP should write some data on serial; transmission speed is much slower than operating speed; so it can do other stuff until tx is empty and ready for new data to be written.      
 
 clear interrupts:
 
@@ -73,8 +73,9 @@ clear interrupts:
 and enable interrupts:
     
     ETS_UART_INTR_ENABLE();
-    
+This interrupt type is more suitable for debugging and checking for errors in communication.
 ### Setting more than 1 interrupt type
+It's possible to utilize more than 1 type of interrupts.
 use **BITWISE |** to set multiple interrupts:
     
     SET_PERI_REG_MASK(UART_INT_ENA(0), UART_RXFIFO_TOUT_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA);
@@ -91,8 +92,7 @@ enable interrupts:
 
     ETS_UART_INTR_ENABLE();
 
-### Step 2: Writing interrupt handler
-
+### Step 2: interrupt handler function
 at top of function, read the cause of interrupt:
 
     uint32_t uart_intr_status = READ_PERI_REG(UART_INT_ST(0));
@@ -100,14 +100,15 @@ checking the type of interrupt:
 
     while (uart_intr_status != 0x0)
     {
-      if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST))
+      if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) //check if timeout 
       {
         //...
       }
-      else if(UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST))
+      else if(UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST))//check if full buffer
       {
         //...
       }
+      //else if() ...
     }
 reading length of recieved buffer:
     
@@ -122,6 +123,7 @@ after processing the recieved data, interrupt status should be cleared:
     
     WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_TOUT_INT_CLR);
     WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_FULL_INT_CLR);
+    //WRITE_PERI_REG(UART_INT_CLR(0), ...)
 at last, it should look like this:
     
     uint32_t uart_intr_status = READ_PERI_REG(UART_INT_ST(0));
@@ -146,9 +148,11 @@ at last, it should look like this:
         //do something with recieved data...
       }
       //checking other interrupt types if enabled...
+      //else if() ... 
+      //clearing other interrupts as well if enabled...
       WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_TOUT_INT_CLR);
       WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_FULL_INT_CLR);
-      //clearing other interrupts as well if enabled...
+      //WRITE_PERI_REG(UART_INT_CLR(0), ...)
       uart_intr_status = READ_PERI_REG(UART_INT_ST(0)); //reading new interrupts
     }
  > Notes: 
