@@ -1,8 +1,8 @@
 ## Setup serial interrupt on ESP8266.
 Arduino framework is one of the frameworks which are used to develop ESP8266 projects and it gives a feature to read data from rx/tx or microUSB port.
 By using Serial object which is part of Arduino, you can read and write data; but you always need to check for available data on serial and then read it;
-This is not a very suitable way to recieve and process data for more complex projects. ESP8266 has a specific header file **"uart_register.h"** which gives access 
-to UART registers(interrupts/read/write). Using this feature gives advantage of recieving and processing data anywhere in the program **without using Serial.read(), Serial.readbytesuntil(), etc. functions.**
+This is not a very suitable way to receive and process data for more complex projects. ESP8266 has a specific header file **"uart_register.h"** which gives access 
+to UART registers(interrupts/read/write). Using this feature gives advantage of receiving and processing data anywhere in the program **without using Serial.read(), Serial.readbytesuntil(), etc. functions.**
 
 ### Step 1: Setting up interrupts
 first, create a function to do settings in it. create another function as interrupt handler. 
@@ -22,7 +22,7 @@ set interrupt mask:
 setup interrupt threshold:
 
     WRITE_PERI_REG(UART_CONF1(0) , (<max length of buffer> & UART_RXFIFO_FULL_THRHD) << UART_RXFIFO_FULL_THRHD_S);
-e.g. if max length of buffer is 0x14 (20 in decimal), after recieving 20 bytes, the interrupt will be activated.
+e.g. if max length of buffer is 0x14 (20 in decimal), after receiving 20 bytes, the interrupt will be activated.
 
 Call these functions to clear other interrupts:
 
@@ -110,7 +110,7 @@ checking the type of interrupt:
       }
       //else if() ...
     }
-reading length of recieved buffer:
+reading the size of received buffer:
     
     uint8_t fifo_len = (READ_PERI_REG(UART_STATUS(uart_no)) >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT;
 reading data from buffer byte by byte;
@@ -119,7 +119,7 @@ reading data from buffer byte by byte;
     for(int i=0; i < fifo_len; i++)
       buffer[i] = READ_PERI_REG(UART_FIFO(0)) & 0xFF;
     buffer[fifo_len] = '\0';
-after processing the recieved data, interrupt status should be cleared:
+after processing the received data, interrupt status should be cleared:
     
     WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_TOUT_INT_CLR);
     WRITE_PERI_REG(UART_INT_CLR(0), UART_RXFIFO_FULL_INT_CLR);
@@ -157,7 +157,7 @@ at last, it should look like this:
     }
  > Notes: 
  > 
- > All or part of unprocessed recieved data will be **lost** by the next interrupt.
+ > All or part of unprocessed received data will be **lost** by the next interrupt.
  > 
  > Interrupt handler must be as fast as possible. Doing complex instructions or using delay(), causes instablity. 
  > 
