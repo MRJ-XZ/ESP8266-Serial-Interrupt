@@ -4,7 +4,7 @@ By using Serial object which is part of Arduino, you can read and write data; bu
 This is not a very suitable way to receive and process data for more complex projects. ESP8266 has a specific header file **"uart_register.h"** which gives access 
 to UART registers(interrupts/read/write). Using this feature gives advantage of receiving and processing data anywhere in the program **without using Serial.read(), Serial.readbytesuntil(), etc. functions.**
 
-An example code is provided. For receiving a better concept of UART interrupt configuration, please refer to ##Wiki. 
+An example code is provided. For receiving a better concept of UART interrupt configuration, please refer to ## Wiki. 
     
     
     
